@@ -1,0 +1,14 @@
+{
+  "name": "ashenveil",
+  "version": "0.6.0",
+  "description": "Ashenveil — 8-bit Top-Down RPG",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
