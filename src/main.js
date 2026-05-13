@@ -3,6 +3,7 @@ import { CANVAS_HEIGHT, CANVAS_WIDTH, DIRECTIONS, PLAYER_SPEED, SOLID_TILES, TIL
 import { createInput } from './core/input.js'
 import { loadGame, saveGame } from './core/save.js'
 import { startingZone } from './data/zones.js'
+import { playerAttack, spawnEnemies, updateEnemies } from './systems/combat.js'
 import { createInteractionController, isOccupiedBySolidEntity } from './systems/interactions.js'
 import { createInventory } from './systems/inventory.js'
 import { createRenderer, drawDialogueBox } from './systems/renderer.js'
@@ -30,6 +31,8 @@ const player = {
   xp: savedGame?.player?.xp ?? 0,
   level: savedGame?.player?.level ?? 1,
   gold: savedGame?.player?.gold ?? 0,
+  maxHp: savedGame?.player?.maxHp ?? 20,
+  atk: savedGame?.player?.atk ?? 3,
 }
 
 const camera = {
@@ -39,6 +42,7 @@ const camera = {
 
 const inventory = createInventory(savedGame?.inventory ?? [])
 const interactions = createInteractionController(startingZone, player, inventory, savedGame?.claimedRewards ?? [])
+const enemies = spawnEnemies(startingZone)
 
 let previousTime = performance.now()
 
@@ -50,8 +54,8 @@ function tick(currentTime) {
   const deltaSeconds = Math.min((currentTime - previousTime) / 1000, 0.05)
   previousTime = currentTime
 
-  update(deltaSeconds)
-  renderer.render({ zone: startingZone, player, camera, inventory })
+  update(deltaSeconds, currentTime)
+  renderer.render({ zone: startingZone, player, camera, inventory, enemies })
 
   if (interactions.active) {
     drawDialogueBox(canvas, interactions.active.speaker, interactions.active.line)
@@ -60,14 +64,20 @@ function tick(currentTime) {
   requestAnimationFrame(tick)
 }
 
-function update(deltaSeconds) {
+function update(deltaSeconds, currentTime) {
   if (input.consumeActionPress()) {
     handleAction()
+  }
+
+  if (input.consumeAttackPress()) {
+    handleAttack()
   }
 
   if (interactions.active) {
     return
   }
+
+  updateCombat(currentTime)
 
   const movement = input.getMovementVector()
   updateFacing(movement)
@@ -132,6 +142,39 @@ function updateFacing(movement) {
 function handleAction() {
   interactions.beginOrAdvance()
   persistGame()
+}
+
+function handleAttack() {
+  const combatPlayer = getCombatPlayer()
+  const didHit = playerAttack(combatPlayer, enemies)
+  syncPlayerFromCombat(combatPlayer)
+
+  if (didHit) {
+    persistGame()
+  }
+}
+
+function updateCombat(now) {
+  const combatPlayer = getCombatPlayer()
+  updateEnemies(enemies, combatPlayer, now)
+  syncPlayerFromCombat(combatPlayer)
+}
+
+function getCombatPlayer() {
+  return {
+    ...player,
+    x: (player.x + player.width / 2) / TILE_SIZE,
+    y: (player.y + player.height - 2) / TILE_SIZE,
+  }
+}
+
+function syncPlayerFromCombat(combatPlayer) {
+  player.hp = combatPlayer.hp
+  player.xp = combatPlayer.xp
+  player.gold = combatPlayer.gold
+  player.level = combatPlayer.level
+  player.maxHp = combatPlayer.maxHp
+  player.atk = combatPlayer.atk
 }
 
 function persistGame() {

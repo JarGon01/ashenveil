@@ -9,15 +9,28 @@ const KEY_BINDINGS = {
   KeyD: 'right',
 }
 
-const ACTION_KEYS = new Set(['Space', 'Enter', 'KeyE', 'KeyZ'])
+const ACTION_KEYS = new Set(['Enter', 'KeyE', 'KeyZ'])
+const ATTACK_KEYS = new Set(['Space'])
 
 export function createInput() {
   const heldDirections = new Set()
   let actionPressed = false
+  let attackPressed = false
   let wasGamepadActionPressed = false
+  let wasGamepadAttackPressed = false
 
   function setKey(event, isPressed) {
     const direction = KEY_BINDINGS[event.code]
+
+    if (ATTACK_KEYS.has(event.code)) {
+      event.preventDefault()
+
+      if (isPressed && !event.repeat) {
+        attackPressed = true
+      }
+
+      return
+    }
 
     if (ACTION_KEYS.has(event.code)) {
       event.preventDefault()
@@ -68,6 +81,18 @@ export function createInput() {
 
       return false
     },
+    consumeAttackPress() {
+      const gamepadAttackPressed = readGamepadAttackPressed()
+      const isNewGamepadPress = gamepadAttackPressed && !wasGamepadAttackPressed
+      wasGamepadAttackPressed = gamepadAttackPressed
+
+      if (attackPressed || isNewGamepadPress) {
+        attackPressed = false
+        return true
+      }
+
+      return false
+    },
   }
 }
 
@@ -108,6 +133,16 @@ function readGamepadActionPressed() {
   }
 
   return Boolean(gamepad.buttons[0]?.pressed || gamepad.buttons[1]?.pressed)
+}
+
+function readGamepadAttackPressed() {
+  const [gamepad] = navigator.getGamepads ? navigator.getGamepads() : []
+
+  if (!gamepad) {
+    return false
+  }
+
+  return Boolean(gamepad.buttons[2]?.pressed)
 }
 
 function normalizeVector(vector) {

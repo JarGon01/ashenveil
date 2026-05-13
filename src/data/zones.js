@@ -50,6 +50,10 @@ export const zones = {
         },
       },
     ],
+    enemies: [
+      { id: 'shadeling-road-1', type: 'shadeling', x: 15, y: 9 },
+      { id: 'wraith-ruins-1', type: 'ashenWraith', x: 23, y: 14 },
+    ],
     tiles: [
       [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S],
       [S, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, S],

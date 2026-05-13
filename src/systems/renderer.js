@@ -5,11 +5,12 @@ export function createRenderer(canvas) {
   context.imageSmoothingEnabled = false
 
   return {
-    render({ zone, player, camera, inventory }) {
+    render({ zone, player, camera, inventory, enemies }) {
       context.clearRect(0, 0, canvas.width, canvas.height)
       drawMap(context, zone, camera, canvas)
       drawObjects(context, zone.objects ?? [], camera)
       drawNpcs(context, zone.npcs, camera)
+      drawEnemies(context, enemies ?? [], camera)
       drawPlayer(context, player, camera)
       drawVignette(context, canvas)
       drawInventorySummary(context, canvas, inventory)
@@ -129,6 +130,36 @@ function drawObjects(context, objects, camera) {
     } else if (object.type === 'campfire') {
       drawCampfire(context, x, y)
     }
+  }
+}
+
+function drawEnemies(context, enemies, camera) {
+  for (const enemy of enemies) {
+    if (enemy.dead) {
+      continue
+    }
+
+    const x = Math.floor(enemy.x * TILE_SIZE - camera.x)
+    const y = Math.floor(enemy.y * TILE_SIZE - camera.y)
+
+    context.fillStyle = COLORS.playerShadow
+    context.fillRect(x + 3, y + 12, 10, 3)
+
+    context.fillStyle = enemy.color
+    context.fillRect(x + 4, y + 4, 8, 9)
+
+    context.fillStyle = '#160e1c'
+    context.fillRect(x + 5, y + 6, 2, 2)
+    context.fillRect(x + 9, y + 6, 2, 2)
+
+    context.fillStyle = '#101010'
+    context.fillRect(x + 2, y + 1, 12, 2)
+
+    context.fillStyle = '#4d1d1d'
+    context.fillRect(x + 2, y + 1, 12, 1)
+
+    context.fillStyle = '#d76464'
+    context.fillRect(x + 2, y + 1, Math.max(0, Math.ceil(12 * (enemy.hp / enemy.maxHp))), 1)
   }
 }
 
