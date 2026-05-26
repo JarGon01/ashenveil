@@ -1,7 +1,7 @@
 // src/core/save.js
 const SAVE_KEY = 'ashenveil_save';
 
-export function saveGame(player, inventory, claimedRewards) {
+export function saveGame(player, inventory, claimedRewards, fastTravelSystem = null) {
   const state = {
     player: {
       x: player.x,
@@ -10,6 +10,7 @@ export function saveGame(player, inventory, claimedRewards) {
       hp: player.hp,
       maxHp: player.maxHp,
       mp: player.mp,
+      maxMp: player.maxMp,
       atk: player.atk,
       xp: player.xp,
       level: player.level,
@@ -17,6 +18,7 @@ export function saveGame(player, inventory, claimedRewards) {
     },
     inventory: inventory.getAll(),
     claimedRewards: Array.from(claimedRewards),
+    fastTravel: fastTravelSystem?.serialize?.() ?? null,
     savedAt: Date.now()
   };
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));

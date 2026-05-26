@@ -5,16 +5,62 @@ export function createRenderer(canvas) {
   context.imageSmoothingEnabled = false
 
   return {
+    context,
     render({ zone, player, camera, inventory, enemies }) {
       context.clearRect(0, 0, canvas.width, canvas.height)
-      drawMap(context, zone, camera, canvas)
-      drawObjects(context, zone.objects ?? [], camera)
-      drawNpcs(context, zone.npcs, camera)
-      drawEnemies(context, enemies ?? [], camera)
-      drawPlayer(context, player, camera)
+      this.drawWorld(context, camera, zone)
+      this.drawEntities(context, camera, { currentZone: zone, player, enemies })
       drawVignette(context, canvas)
       drawInventorySummary(context, canvas, inventory)
     },
+    drawWorld(contextArg, cameraArg, zoneArg) {
+      const { drawContext, camera, zone } = resolveWorldArgs(context, contextArg, cameraArg, zoneArg)
+      drawMap(drawContext, zone, camera, canvas)
+      drawObjects(drawContext, zone.objects ?? [], camera)
+    },
+    drawEntities(contextArg, cameraArg, stateArg) {
+      const { drawContext, camera, zone, player, enemies } = resolveEntityArgs(context, contextArg, cameraArg, stateArg)
+      drawNpcs(drawContext, zone.npcs, camera, player)
+      drawEnemies(drawContext, enemies ?? [], camera)
+      drawPlayer(drawContext, player, camera)
+      drawVignette(drawContext, canvas)
+    },
+  }
+}
+
+function resolveWorldArgs(defaultContext, contextArg, cameraArg, zoneArg) {
+  if (zoneArg) {
+    return {
+      drawContext: contextArg,
+      camera: cameraArg,
+      zone: zoneArg,
+    }
+  }
+
+  return {
+    drawContext: defaultContext,
+    camera: contextArg.camera,
+    zone: contextArg.zone,
+  }
+}
+
+function resolveEntityArgs(defaultContext, contextArg, cameraArg, stateArg) {
+  if (stateArg) {
+    return {
+      drawContext: contextArg,
+      camera: cameraArg,
+      zone: stateArg.zone ?? stateArg.currentZone,
+      player: stateArg.player,
+      enemies: stateArg.enemies,
+    }
+  }
+
+  return {
+    drawContext: defaultContext,
+    camera: contextArg.camera,
+    zone: contextArg.zone,
+    player: contextArg.player,
+    enemies: contextArg.enemies,
   }
 }
 
@@ -98,8 +144,12 @@ function drawPlayer(context, player, camera) {
   drawFacingPip(context, x, y, player.facing, COLORS.ember)
 }
 
-function drawNpcs(context, npcs, camera) {
+function drawNpcs(context, npcs, camera, player) {
   for (const npc of npcs) {
+    if (npc.hidden && (player?.level ?? 1) < (npc.levelRequired ?? 1)) {
+      continue
+    }
+
     const x = Math.floor(npc.x * TILE_SIZE + 2 - camera.x)
     const y = Math.floor(npc.y * TILE_SIZE + 1 - camera.y)
 
@@ -129,8 +179,25 @@ function drawObjects(context, objects, camera) {
       drawSign(context, x, y)
     } else if (object.type === 'campfire') {
       drawCampfire(context, x, y)
+    } else if (object.type === 'waystone') {
+      drawWaystone(context, x, y)
     }
   }
+}
+
+function drawWaystone(context, x, y) {
+  context.fillStyle = COLORS.playerShadow
+  context.fillRect(x + 3, y + 13, 10, 3)
+
+  context.fillStyle = '#35485f'
+  context.fillRect(x + 5, y + 4, 6, 10)
+
+  context.fillStyle = '#88d8c0'
+  context.fillRect(x + 7, y + 2, 2, 3)
+  context.fillRect(x + 6, y + 7, 4, 1)
+
+  context.fillStyle = '#d7b36a'
+  context.fillRect(x + 4, y + 14, 8, 1)
 }
 
 function drawEnemies(context, enemies, camera) {
@@ -147,6 +214,11 @@ function drawEnemies(context, enemies, camera) {
 
     context.fillStyle = enemy.color
     context.fillRect(x + 4, y + 4, 8, 9)
+
+    if (enemy._hitFlash > 0) {
+      context.fillStyle = 'rgba(255, 255, 255, 0.75)'
+      context.fillRect(x + 3, y + 3, 10, 11)
+    }
 
     context.fillStyle = '#160e1c'
     context.fillRect(x + 5, y + 6, 2, 2)

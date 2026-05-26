@@ -18,7 +18,7 @@ export function createInteractionController(zone, player, inventory, initialClai
       }
 
       const targetTile = getFacingTile(player)
-      const target = findInteractionTarget(zone, targetTile)
+      const target = findInteractionTarget(zone, targetTile, player)
 
       if (!target) {
         return null
@@ -30,8 +30,8 @@ export function createInteractionController(zone, player, inventory, initialClai
   }
 }
 
-export function isOccupiedBySolidEntity(zone, tile) {
-  return getSolidEntities(zone).some((entity) => entity.x === tile.x && entity.y === tile.y)
+export function isOccupiedBySolidEntity(zone, tile, player = null) {
+  return getSolidEntities(zone, player).some((entity) => entity.x === tile.x && entity.y === tile.y)
 }
 
 export function getFacingTile(player) {
@@ -59,16 +59,20 @@ export function getPlayerTile(player) {
   }
 }
 
-function findInteractionTarget(zone, tile) {
-  return getInteractionTargets(zone).find((target) => target.x === tile.x && target.y === tile.y)
+function findInteractionTarget(zone, tile, player) {
+  return getInteractionTargets(zone, player).find((target) => target.x === tile.x && target.y === tile.y)
 }
 
-function getInteractionTargets(zone) {
-  return [...(zone.npcs ?? []), ...(zone.objects ?? [])]
+function getInteractionTargets(zone, player = null) {
+  const visibleNpcs = (zone.npcs ?? []).filter((npc) => (
+    !npc.hidden || (player?.level ?? 1) >= (npc.levelRequired ?? 1)
+  ))
+
+  return [...visibleNpcs, ...(zone.objects ?? [])]
 }
 
-function getSolidEntities(zone) {
-  return getInteractionTargets(zone).filter((entity) => entity.solid !== false)
+function getSolidEntities(zone, player = null) {
+  return getInteractionTargets(zone, player).filter((entity) => entity.solid !== false)
 }
 
 function createDialogueState(target, inventory, claimedRewardIds) {

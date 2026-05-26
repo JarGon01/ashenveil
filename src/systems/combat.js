@@ -1,5 +1,7 @@
 // src/systems/combat.js
 
+import { spawnDamageNumber, spawnHitFlash, spawnDefeatBurst } from './fx.js';
+
 export const ENEMY_TYPES = {
   shadeling: {
     name: 'Shadeling',
@@ -47,6 +49,7 @@ export function spawnEnemies(zone) {
 export function updateEnemies(enemies, player, now) {
   for (const e of enemies) {
     if (e.dead) continue;
+    if (e._hitFlash > 0) e._hitFlash -= 1;
 
     const dx = player.x - e.x;
     const dy = player.y - e.y;
@@ -79,6 +82,7 @@ export function updateEnemies(enemies, player, now) {
 export function playerAttack(player, enemies) {
   const ATTACK_RANGE = 1.5;
   let hit = false;
+  player._leveledUp = false;
 
   for (const e of enemies) {
     if (e.dead) continue;
@@ -87,14 +91,21 @@ export function playerAttack(player, enemies) {
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist <= ATTACK_RANGE) {
-      const dmg = Math.max(1, (player.atk ?? 3) - e.def);
-      e.hp -= dmg;
+      const baseDamage = Math.max(1, (player.atk ?? 3) - e.def);
+      const isCrit = Math.random() < 0.15; // 15% crit chance
+      const damage = isCrit
+        ? Math.floor(baseDamage * 1.75)
+        : baseDamage;
+      e.hp -= damage;
+      spawnDamageNumber(e.x * 16 + 8, e.y * 16, damage, isCrit);
+      spawnHitFlash(e);
       hit = true;
       if (e.hp <= 0) {
+        spawnDefeatBurst(e.x * 16 + 8, e.y * 16 + 8);
         e.dead = true;
         player.xp = (player.xp ?? 0) + e.xp;
         player.gold = (player.gold ?? 0) + e.gold;
-        checkLevelUp(player);
+        player._leveledUp = checkLevelUp(player) || player._leveledUp;
       }
     }
   }

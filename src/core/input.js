@@ -11,9 +11,16 @@ const KEY_BINDINGS = {
 
 const ACTION_KEYS = new Set(['Enter', 'KeyE', 'KeyZ'])
 const ATTACK_KEYS = new Set(['Space'])
+const JUST_PRESS_KEYS = new Map([
+  ['KeyM', 'select'],
+  ['Escape', 'cancel'],
+  ['Enter', 'confirm'],
+  ['KeyE', 'cancel'],
+])
 
 export function createInput() {
   const heldDirections = new Set()
+  const justPressed = new Set()
   let actionPressed = false
   let attackPressed = false
   let wasGamepadActionPressed = false
@@ -21,6 +28,19 @@ export function createInput() {
 
   function setKey(event, isPressed) {
     const direction = KEY_BINDINGS[event.code]
+
+    if (isPressed && !event.repeat) {
+      justPressed.add(event.code)
+
+      if (direction) {
+        justPressed.add(direction)
+      }
+
+      const mappedPress = JUST_PRESS_KEYS.get(event.code)
+      if (mappedPress) {
+        justPressed.add(mappedPress)
+      }
+    }
 
     if (ATTACK_KEYS.has(event.code)) {
       event.preventDefault()
@@ -92,6 +112,12 @@ export function createInput() {
       }
 
       return false
+    },
+    isJustPressed(code) {
+      return justPressed.has(code)
+    },
+    endFrame() {
+      justPressed.clear()
     },
   }
 }
